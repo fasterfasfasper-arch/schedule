@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="KLMSの課題を取り込み、1日の帯に自動で置くスケジュールアプリ">
+<meta name="theme-color" content="#EEF1F5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C1020" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mission Now">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{color-scheme:light dark;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Mission Now</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=JetBrains+Mono:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --surface2:#F5F7FA; --ink:#141A2E; --muted:#5A6378; --line:#D6DBE4;
+  --accent:#D9771F; --accent-soft:#FBE9D6; --on-accent:#FFFFFF;
+  --hot:#C9362B; --hot-soft:#FBE3E0; --warm:#A96B12; --warm-soft:#FBF0D9;
+  --cool:#3F6FB5; --cool-soft:#E2EBF7; --ok:#2B8A5E; --ok-soft:#DDF2E7;
+  --shadow:0 1px 2px rgba(20,26,46,.06),0 10px 28px rgba(20,26,46,.08);
+  --display:'Dela Gothic One','Zen Kaku Gothic New','Hiragino Sans',system-ui,sans-serif;
+  --body:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP','Yu Gothic',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C1020; --surface:#151B2F; --surface2:#1B2238; --ink:#E7EAF3; --muted:#8C94AD; --line:#283049;
+    --accent:#F29B45; --accent-soft:#3A2814; --on-accent:#1E1206;
+    --hot:#FF7A6B; --hot-soft:#3D1A1A; --warm:#F0B64E; --warm-soft:#382B12;
+    --cool:#86ABF2; --cool-soft:#18264A; --ok:#56C893; --ok-soft:#123326;
+    --shadow:0 1px 0 rgba(255,255,255,.03),0 12px 30px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C1020; --surface:#151B2F; --surface2:#1B2238; --ink:#E7EAF3; --muted:#8C94AD; --line:#283049;
+  --accent:#F29B45; --accent-soft:#3A2814; --on-accent:#1E1206;
+  --hot:#FF7A6B; --hot-soft:#3D1A1A; --warm:#F0B64E; --warm-soft:#382B12;
+  --cool:#86ABF2; --cool-soft:#18264A; --ok:#56C893; --ok-soft:#123326;
+  --shadow:0 1px 0 rgba(255,255,255,.03),0 12px 30px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.app{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:0 110px}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding-block:14px 12px}
+.brand{display:flex;flex-direction:column;line-height:1.2}
+.logo{font-family:var(--display);font-size:17px;letter-spacing:.06em}
+.clock{font-size:12px;color:var(--muted)}
+.energy{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--surface2)}
+.energy button{border:0;background:transparent;padding:6px 11px;border-radius:999px;font-size:13px;display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.energy button[aria-checked="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:700}
+.bat{display:inline-grid;grid-template-columns:repeat(3,4px);gap:1.5px;padding:2px;border:1.5px solid currentColor;border-radius:3px;height:12px;position:relative}
+.bat::after{content:"";position:absolute;right:-4px;top:3px;width:2px;height:4px;background:currentColor;border-radius:0 1px 1px 0}
+.bat i{display:block;background:currentColor;opacity:.18;border-radius:1px}
+.bat i.on{opacity:1}
+.energy button[data-e="low"][aria-checked="true"]{color:var(--cool)}
+.energy button[data-e="normal"][aria-checked="true"]{color:var(--warm)}
+.energy button[data-e="full"][aria-checked="true"]{color:var(--ok)}
+
+.view{display:flex;flex-direction:column;gap:14px}
+.sample-banner{font-size:13px;background:var(--accent-soft);color:var(--ink);border-radius:12px;padding:10px 14px}
+.sample-banner button{border:0;background:none;text-decoration:underline;padding:0;font-weight:700}
+.eyebrow{font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:700}
+.muted{color:var(--muted)}
+
+/* now */
+.inclass{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:12px 16px;border-radius:14px;background:var(--cool-soft)}
+.inclass .lbl{font-size:12px;font-weight:700;color:var(--cool);letter-spacing:.1em}
+.inclass b{font-size:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow)}
+.main{display:flex;flex-direction:column;gap:14px}
+.main .course{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;font-size:12px;padding:2px 9px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);white-space:nowrap}
+.chip.w-light{color:var(--ok);border-color:transparent;background:var(--ok-soft)}
+.chip.w-mid{color:var(--warm);border-color:transparent;background:var(--warm-soft)}
+.chip.w-heavy{color:var(--hot);border-color:transparent;background:var(--hot-soft)}
+.main h2{margin:0;font-size:clamp(22px,5.6vw,28px);line-height:1.3;text-wrap:balance}
+.count{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.count .dur{font-size:15px}
+.count .dur b{font-family:var(--display);font-weight:400;font-size:36px;line-height:1;margin-inline:1px}
+.count .due{font-size:13px;color:var(--muted)}
+.hot .dur{color:var(--hot)} .warm .dur{color:var(--warm)} .cool .dur{color:var(--cool)}
+.bar{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;background:currentColor}
+.hot .bar{color:var(--hot)} .warm .bar{color:var(--warm)} .cool .bar{color:var(--cool)}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.btn{border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:10px 8px;font-size:14px;text-align:center;text-decoration:none;display:inline-flex;justify-content:center;align-items:center;gap:6px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{grid-column:1/-1;background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:700;font-size:16px;padding:14px}
+.btn.ghost{background:transparent}
+.timer{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0}
+.timer .t{font-family:var(--mono);font-size:56px;font-weight:700;line-height:1;color:var(--accent)}
+.empty{text-align:center;padding:28px 20px}
+.empty h2{font-size:22px;margin:0 0 6px}
+.next{display:flex;flex-direction:column;gap:8px}
+.nrow{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
+.nrow .k{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted);min-width:3.2em}
+.nrow .v{flex:1;min-width:0}
+.nrow .v div{overflow-wrap:anywhere}
+.nrow .s{font-size:12px;color:var(--muted)}
+.hint{font-size:14px;padding:12px 14px;border-radius:14px;border:1px dashed var(--line)}
+.recover{display:flex;flex-direction:column;gap:8px}
+.recover .rr{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.recover .rr .v{flex:1;min-width:12em}
+.recover .rr .btn{padding:6px 10px;font-size:13px}
+.week{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:14px}
+.dots{display:flex;gap:4px}
+.dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.dots i.d{background:var(--ok)} .dots i.s{background:var(--accent)}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px}
+
+/* tasks */
+.group h3{font-size:13px;letter-spacing:.1em;color:var(--muted);margin:8px 0 6px;font-weight:700}
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.row{display:flex;gap:10px;align-items:center;padding:12px 12px;border-top:1px solid var(--line);border-left:4px solid transparent}
+.row:first-child{border-top:0}
+.row.hot{border-left-color:var(--hot)} .row.warm{border-left-color:var(--warm)} .row.cool{border-left-color:var(--cool)}
+.row.done{opacity:.55}
+.row.done .rtitle{text-decoration:line-through}
+.check{width:26px;height:26px;flex:none;border-radius:50%;border:2px solid var(--line);background:transparent;display:grid;place-items:center;padding:0}
+.check.on{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.rmain{flex:1;min-width:0}
+.rtitle{font-weight:500;overflow-wrap:anywhere}
+.rmeta{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:12px;color:var(--muted)}
+.wt{flex:none;border:0;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.wt.w-light{background:var(--ok-soft);color:var(--ok)} .wt.w-mid{background:var(--warm-soft);color:var(--warm)} .wt.w-heavy{background:var(--hot-soft);color:var(--hot)}
+.open{flex:none;width:32px;height:32px;display:grid;place-items:center;border-radius:10px;text-decoration:none;color:var(--muted);border:1px solid var(--line)}
+.unread{font-weight:700}
+.unread::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:6px;vertical-align:middle}
+
+/* timetable */
+.tt-wrap{overflow-x:auto;border-radius:16px;border:1px solid var(--line);background:var(--surface)}
+table.tt{border-collapse:collapse;width:100%;min-width:480px;table-layout:fixed}
+.tt th{font-size:12px;color:var(--muted);font-weight:700;padding:8px 4px;border-bottom:1px solid var(--line)}
+.tt th.today{color:var(--accent)}
+.tt td{border-top:1px solid var(--line);border-left:1px solid var(--line);vertical-align:top;padding:4px;height:70px}
+.tt td.pn{border-left:0;text-align:center;font-size:11px;color:var(--muted);width:52px;padding-top:8px}
+.tt td.pn b{display:block;font-size:15px;color:var(--ink);font-family:var(--mono)}
+.tt td.todaycol{background:var(--surface2)}
+.cell{width:100%;height:100%;min-height:60px;border:0;border-radius:10px;text-align:left;padding:6px 7px;background:var(--cool-soft);display:flex;flex-direction:column;gap:2px;font-size:12px;line-height:1.35}
+.cell b{font-size:13px;overflow-wrap:anywhere}
+.cell span{color:var(--muted);font-size:11px}
+.cell.now{background:var(--accent);color:var(--on-accent)}
+.cell.now span{color:var(--on-accent);opacity:.85}
+.cell.sel{outline:2px solid var(--accent);outline-offset:1px}
+.detail{display:flex;flex-direction:column;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px}
+.field input,.field select,textarea{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;width:100%}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;overflow-wrap:anywhere}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.toolbar .field{flex:1;min-width:140px}
+
+/* import */
+.steps{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none;counter-reset:s}
+.steps>li{display:grid;grid-template-columns:28px 1fr;gap:10px;counter-increment:s}
+.steps>li::before{content:counter(s);width:26px;height:26px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:700}
+.url{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.urlrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.urlrow code{font-family:var(--mono);font-size:11.5px;flex:1;min-width:0;overflow-wrap:anywhere;color:var(--muted)}
+.urlrow .lbl{font-size:12px;font-weight:700;width:100%}
+.urlrow .btn{padding:5px 10px;font-size:12px}
+textarea{min-height:130px;font-family:var(--mono);font-size:12px;resize:vertical}
+.status{font-size:14px;padding:12px 14px;border-radius:12px}
+.status.ok{background:var(--ok-soft)} .status.err{background:var(--hot-soft)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.btnrow .btn{padding:9px 14px}
+.danger{color:var(--hot)}
+
+
+/* day strip */
+.dayhead{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap}
+.freeline{font-size:15px}.freeline b{font-family:var(--display);font-weight:400;font-size:30px;margin-inline:4px}
+.seg{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--surface2)}
+.seg button{border:0;background:transparent;padding:5px 14px;border-radius:999px;font-size:13px;color:var(--muted)}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.slotline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.slotline .mono{color:var(--accent);font-weight:700;font-size:15px}
+.strip{display:grid;grid-template-columns:40px 1fr;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px 10px 14px 0;overflow:hidden}
+.hours{position:relative}
+.hours span{position:absolute;right:8px;transform:translateY(-50%);font-family:var(--mono);font-size:11px;color:var(--muted)}
+.track{position:relative;background-image:repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px 60px);background-position:0 var(--off,0)}
+.gap{position:absolute;left:0;right:0;border-radius:10px;background:repeating-linear-gradient(135deg,transparent 0 7px,var(--surface2) 7px 14px)}
+.gap span{position:absolute;right:8px;top:6px;font-size:11px;color:var(--muted);background:var(--surface);padding:0 6px;border-radius:6px}
+.blk{position:absolute;left:0;right:0;border-radius:10px;padding:5px 10px;text-align:left;overflow:hidden;display:flex;flex-direction:column;gap:1px;font-size:12px;line-height:1.3;border:0;z-index:1}
+.blk b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk b i{font-style:normal;font-weight:400;font-size:11px;opacity:.8}
+.blk span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.8;font-size:11px}
+.blk.cls{background:var(--ink);color:var(--bg)}
+.blk.cls.live{box-shadow:0 0 0 3px var(--accent)}
+.blk.task{left:18px;background:var(--surface);border:1.5px dashed var(--accent);color:var(--ink)}
+.blk.task::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ok)}
+.blk.task.w-mid::before{background:var(--warm)}.blk.task.w-heavy::before{background:var(--hot)}
+.blk.task.sel{border-style:solid;background:var(--accent-soft)}
+.dl{position:absolute;left:-4px;right:0;height:0;border-top:1.5px dashed var(--hot);z-index:2;pointer-events:none}
+.dl span{position:absolute;right:4px;top:-9px;font-size:10.5px;font-weight:700;color:var(--hot);background:var(--surface);padding:0 5px;border-radius:5px;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nowline{position:absolute;left:-6px;right:0;height:2px;background:var(--accent);z-index:3;pointer-events:none}
+.nowline::before{content:"";position:absolute;left:-3px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.nowline span{position:absolute;left:10px;top:-10px;font-family:var(--mono);font-size:11px;font-weight:700;background:var(--accent);color:var(--on-accent);padding:1px 6px;border-radius:6px}
+
+
+.stripwrap{max-height:min(64vh,620px);overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:18px;overscroll-behavior:contain}
+.strip{border:0;border-radius:0;background:transparent}
+.night{position:absolute;left:-40px;right:0;background:var(--surface2);z-index:0}
+.night span{position:absolute;left:46px;top:8px;font-size:11px;color:var(--muted)}
+
+/* nav */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabs button{border:0;background:none;padding:10px 4px 12px;font-size:12px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+.tabs button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabs button[aria-selected="true"]{color:var(--ink);font-weight:700}
+.tabs button[aria-selected="true"] svg{stroke:var(--accent)}
+.badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:var(--hot);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;font-family:var(--mono)}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:14px;z-index:9;max-width:calc(100% - 32px);text-align:center;animation:pop .25s ease-out}
+@keyframes pop{from{transform:translate(-50%,8px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:420px){.energy button{padding:6px 8px}.energy .t{display:none}}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="logo">MISSION NOW</span><span id="clock" class="clock mono"></span></div>
+    <div class="energy" role="radiogroup" aria-label="今日のエネルギー">
+      <button type="button" role="radio" data-e="low" aria-checked="false" title="低電力"><span class="bat"><i class="on"></i><i></i><i></i></span><span class="t">低電力</span></button>
+      <button type="button" role="radio" data-e="normal" aria-checked="true" title="ふつう"><span class="bat"><i class="on"></i><i class="on"></i><i></i></span><span class="t">ふつう</span></button>
+      <button type="button" role="radio" data-e="full" aria-checked="false" title="満タン"><span class="bat"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="t">満タン</span></button>
+    </div>
+  </header>
+
+  <main>
+    <section id="view-now" class="view"></section>
+    <section id="view-tasks" class="view" hidden></section>
+    <section id="view-week" class="view" hidden></section>
+    <section id="view-import" class="view" hidden>
+      <div class="card">
+        <div class="eyebrow">KLMSから取り込む</div>
+        <ol class="steps" style="margin-top:12px">
+          <li><div>ブラウザでKLMSにログインしておく。<span class="muted">(IDとパスワードはこのアプリには入力しません)</span></div></li>
+          <li><div>下のアドレスを新しいタブで開く。
+            <div class="url">
+              <div class="urlrow"><span class="lbl">課題・お知らせ</span><code id="url-planner"></code><button class="btn" data-act="copy" data-target="url-planner">コピー</button><a class="btn" id="open-planner" target="_blank" rel="noopener">開く</a></div>
+              <div class="urlrow"><span class="lbl">コース一覧(時間割用・学期はじめに1回)</span><code id="url-courses"></code><button class="btn" data-act="copy" data-target="url-courses">コピー</button><a class="btn" id="open-courses" target="_blank" rel="noopener">開く</a></div>
+            </div></div></li>
+          <li><div>表示された文字を <b>Ctrl+A</b>(全選択)→ <b>Ctrl+C</b> でコピー。</div></li>
+          <li><div>ここに貼り付けて「取り込む」。2つとも同じ欄に1つずつ貼れます。
+            <textarea id="paste" placeholder='[{"context_type":"Course", ... ]' style="margin-top:8px" aria-label="KLMSのデータを貼り付け"></textarea>
+            <div class="btnrow" style="margin-top:8px"><button class="btn primary" style="grid-column:auto" data-act="import">取り込む</button></div>
+          </div></li>
+        </ol>
+      </div>
+      <div id="import-status"></div>
+      <div class="card detail">
+        <div class="eyebrow">設定</div>
+        <div class="toolbar">
+          <label class="field">学期の開始日(これより前のデータは取り込まない)<input type="date" id="semstart"></label>
+          <label class="field">時間割に出す学期<select id="term"><option value="秋">秋学期</option><option value="春">春学期</option><option value="">すべて</option></select></label>
+        </div>
+        <div id="import-info" class="muted" style="font-size:13px"></div>
+      </div>
+      <div class="card detail">
+        <div class="eyebrow">データ</div>
+        <p class="muted" style="margin:0;font-size:13px">データはこのブラウザの中だけに保存されます。別の端末に移すときや念のための保存は、バックアップをコピーしてメモ帳などに残し、上の欄に貼れば復元できます。</p>
+        <div class="btnrow">
+          <button class="btn" data-act="backup">バックアップをコピー</button>
+          <button class="btn" data-act="clear-sample" id="btn-clear-sample">サンプルを消す</button>
+          <button class="btn danger" data-act="wipe" id="btn-wipe">全データを削除</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabs" aria-label="画面切り替え"><div class="in" role="tablist">
+    <button role="tab" data-tab="now" aria-selected="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>いま</button>
+    <button role="tab" data-tab="tasks" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>課題<span class="badge" id="badge" hidden></span></button>
+    <button role="tab" data-tab="week" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M9 4.5v16M14.5 4.5v16"/></svg>時間割</button>
+    <button role="tab" data-tab="import" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5"/><path d="M4.5 15.5v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/></svg>取り込み</button>
+  </div></nav>
+  <div id="toast" class="toast" hidden></div>
+</div>
+
+<script>
+(function(){
+const KEY='missionnow.v1';
+const DAYS=['日','月','火','水','木','金','土'];
+const PERIODS={1:['09:00','10:30'],2:['10:45','12:15'],3:['13:00','14:30'],4:['14:45','16:15'],5:['16:30','18:00'],6:['18:10','19:40'],7:['19:50','21:20']};
+const TASK_TYPES=['assignment','quiz','discussion_topic','wiki_page','planner_note'];
+const DONE_MSG=['ミッション完了。','1つ片付いた。えらい。','クリア。次は休んでもいい。','完了。船はちゃんと進んでる。','ナイス。今日はもう十分かも。'];
+const W_LABEL={light:'軽',mid:'中',heavy:'重'};
+const H=3600e3, D=24*H;
+
+let S=load()||makeSample();
+let tab='now', timer=null, selCell=null, wipeArm=false, dayOffset=0, dayOffsetTouched=false, selId=null, stripScroll=null;
+
+function load(){try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s)}catch(e){}return null}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function pad(n){return String(n).padStart(2,'0')}
+function atTime(date,hhmm){const d=new Date(date);const [h,m]=hhmm.split(':');d.setHours(+h,+m,0,0);return d}
+
+/* ---------- course name parsing ---------- */
+function parseCourse(name){
+  const out={name,term:null,slots:[],teacher:'',subject:name,campus:'',room:''};
+  const m=String(name).match(/^(\S+?)\s*(春|秋|通年|夏|冬)?\s*\[([^\]]*)\]\s*(.*?)\s*\[([^\]]*)\]\s*$/);
+  if(!m)return out;
+  out.code=m[1];out.term=m[2]||null;
+  const re=/([月火水木金土日])\s*(\d)/g;let s;
+  while((s=re.exec(m[3])))out.slots.push({d:DAYS.indexOf(s[1]),p:+s[2]});
+  const mid=m[4].trim();
+  if(mid.includes('　')){const i=mid.indexOf('　');out.teacher=mid.slice(0,i).trim();out.subject=mid.slice(i+1).trim()||mid}
+  else{const t=mid.split(/\s+/);if(t.length>=3){out.teacher=t.slice(0,2).join(' ');out.subject=t.slice(2).join(' ')}else out.subject=mid}
+  const pl=m[5].trim().split(/\s+/);out.campus=pl[0]||'';out.room=pl.slice(1).join(' ');
+  return out;
+}
+
+/* ---------- sample ---------- */
+function makeSample(){
+  const now=Date.now(),h=n=>new Date(now+n*H).toISOString();
+  const defs=[[9001,'3-21 秋[火2 金2]サンプル 教員　電磁気学第2 [矢上 14-101]'],[9002,'3-22 秋[火3]サンプル 教員　物理情報実験 [矢上 26-112]'],[9003,'3-23 秋[月3 木3]サンプル 教員　統計力学 [矢上 12-211]'],[9004,'3-24 秋[水2]サンプル 教員　プログラミング演習 [日吉 D202]'],[9005,'3-25 秋[月4 木4]サンプル 教員　量子力学第2 [矢上 11-41]']];
+  const courses={};defs.forEach(([id,n])=>courses[id]={id,...parseCourse(n)});
+  const u='https://lms.keio.jp/';
+  const items={};
+  [{id:'assignment:s1',type:'assignment',title:'第3回 演習',courseId:9003,due:h(20),points:10},
+   {id:'assignment:s2',type:'assignment',title:'実験レポート #2(誘電率の測定)',courseId:9002,due:h(76),points:100},
+   {id:'quiz:s3',type:'quiz',title:'小テスト 第4回',courseId:9001,due:h(44),points:5},
+   {id:'assignment:s4',type:'assignment',title:'課題2: ソートの実装',courseId:9004,due:h(150),points:30},
+   {id:'assignment:s5',type:'assignment',title:'第2回 演習',courseId:9005,due:h(-30),points:10,missing:true},
+   {id:'assignment:s6',type:'assignment',title:'第2回 演習',courseId:9003,due:h(-60),points:10,submitted:true},
+   {id:'announcement:s7',type:'announcement',title:'【休講】来週火曜2限は休講です',courseId:9001,due:h(-5),readState:'unread'},
+   {id:'announcement:s8',type:'announcement',title:'実験の班分けを公開しました',courseId:9002,due:h(-28),readState:'unread'}
+  ].forEach(it=>items[it.id]={url:u,...it});
+  return {v:1,sample:true,energy:'normal',term:'秋',semesterStart:'2026-09-20',courses,items,log:[],lastImport:null};
+}
+
+/* ---------- model helpers ---------- */
+const isTask=it=>TASK_TYPES.includes(it.type);
+const isDone=it=>!!(it.submitted||it.userDone);
+function weightOf(it){if(it.weight)return it.weight;if(it.type==='quiz')return 'light';if(it.points==null)return 'mid';return it.points<=10?'light':it.points<=40?'mid':'heavy'}
+function courseOf(it){return S.courses[it.courseId]}
+function subj(it){const c=courseOf(it);return c?c.subject:(it.courseName||'')}
+function termOK(c){return !S.term||!c.term||c.term===S.term||c.term==='通年'}
+function urg(ms){return ms<D?'hot':ms<3*D?'warm':'cool'}
+function durHTML(ms){
+  ms=Math.max(0,ms);const m=Math.floor(ms/6e4);
+  if(m<60)return `<b>${m}</b>分`;
+  const h=Math.floor(m/60);if(h<24)return `<b>${h}</b>時間<b>${m%60}</b>分`;
+  return `<b>${Math.floor(h/24)}</b>日<b>${h%24}</b>時間`;
+}
+function durTxt(ms){return durHTML(ms).replace(/<\/?b>/g,'')}
+function fmtDue(iso){const d=new Date(iso);return `${d.getMonth()+1}/${d.getDate()}(${DAYS[d.getDay()]}) ${pad(d.getHours())}:${pad(d.getMinutes())}`}
+function hm(d){return `${pad(d.getHours())}:${pad(d.getMinutes())}`}
+
+function activeTasks(now){
+  return Object.values(S.items).filter(it=>isTask(it)&&!isDone(it)&&!it.hidden&&(it.pinned||new Date(it.due)>=now)&&!(it.snoozeUntil&&new Date(it.snoozeUntil)>now))
+    .sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||new Date(a.due)-new Date(b.due));
+}
+function overdue(now){return Object.values(S.items).filter(it=>isTask(it)&&!isDone(it)&&!it.hidden&&!it.pinned&&new Date(it.due)<now&&now-new Date(it.due)<14*D).sort((a,b)=>new Date(b.due)-new Date(a.due))}
+function weekStart(now){const d=new Date(now);const k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);d.setHours(0,0,0,0);return d}
+function unreadAnn(){return Object.values(S.items).filter(it=>it.type==='announcement'&&it.readState==='unread'&&!it.hidden)}
+
+/* ---------- render ---------- */
+function render(){
+  const now=new Date();
+  document.getElementById('clock').textContent=`${now.getMonth()+1}/${now.getDate()}(${DAYS[now.getDay()]}) ${hm(now)}`;
+  document.querySelectorAll('.energy button').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.e===S.energy)));
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===tab)));
+  ['now','tasks','week','import'].forEach(t=>document.getElementById('view-'+t).hidden=t!==tab);
+  const act=activeTasks(now),soon=act.filter(t=>new Date(t.due)-now<D).length,badge=document.getElementById('badge');
+  badge.hidden=!soon;badge.textContent=soon;
+  if(tab==='now')renderNow(now);
+  if(tab==='tasks')renderTasks(now);
+  if(tab==='week')renderWeek(now);
+  if(tab==='import')renderImport();
+}
+function sampleBanner(){return S.sample?`<div class="sample-banner">いま表示しているのは<b>サンプルデータ</b>です。KLMSから取り込むと自動で置き換わります。 <button data-act="goto" data-tab="import">取り込みへ</button></div>`:''}
+
+/* ---------- day plan (the strip) ---------- */
+const EST={light:30,mid:60,heavy:90};
+const DAY_START='00:00',DAY_END='24:00',ACT_START='08:00',ACT_END='23:00',PX=1.0,BREAK=10,MAX_BLOCKS=4;
+function sameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate()}
+function slotsFor(day){
+  const out=[];Object.values(S.courses).forEach(c=>{if(!termOK(c))return;c.slots.forEach(s=>{if(s.d===day.getDay()&&PERIODS[s.p])out.push({c,p:s.p,start:atTime(day,PERIODS[s.p][0]),end:atTime(day,PERIODS[s.p][1])})})});
+  return out.sort((a,b)=>a.start-b.start);
+}
+function planDay(day,now){
+  const isToday=sameDay(day,now),ds=atTime(day,DAY_START),de=new Date(atTime(day,DAY_START).getTime()+24*H);
+  const as=atTime(day,ACT_START),ae=atTime(day,ACT_END);
+  const classes=slotsFor(day);
+  const gaps=[];let t=ds;
+  classes.forEach(k=>{if(k.start>t)gaps.push({s:t,e:k.start});if(k.end>t)t=k.end});
+  if(de>t)gaps.push({s:t,e:de});
+  const cursor=isToday?new Date(Math.max(as,Math.ceil(now/(5*6e4))*5*6e4)):as;
+  const open=gaps.map(g=>({s:new Date(Math.max(g.s,cursor)),e:new Date(Math.min(g.e,ae))})).filter(g=>g.e-g.s>=20*6e4);
+  let cand=Object.values(S.items).filter(it=>isTask(it)&&!isDone(it)&&!it.hidden&&(it.pinned||new Date(it.due)>=now)&&!(it.snoozeUntil&&new Date(it.snoozeUntil)>de)&&(it.pinned||new Date(it.due)-ds<7*D));
+  if(S.energy==='low')cand=cand.filter(it=>weightOf(it)==='light');
+  cand.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||new Date(a.due)-new Date(b.due));
+  const blocks=[];let gi=0,s=open[0]&&open[0].s;
+  for(const it of cand){
+    if(blocks.length>=MAX_BLOCKS)break;
+    while(gi<open.length&&(open[gi].e-s)/6e4<20){gi++;s=open[gi]&&open[gi].s}
+    if(gi>=open.length)break;
+    if(!it.pinned&&new Date(it.due)<=s)continue;
+    let need=EST[weightOf(it)];if(S.energy==='low')need=Math.min(need,30);
+    const len=Math.min(need,(open[gi].e-s)/6e4);
+    const b={it,s:new Date(s),e:new Date(s.getTime()+len*6e4),partial:len<need};
+    blocks.push(b);s=new Date(b.e.getTime()+BREAK*6e4);
+  }
+  const openMin=open.reduce((a,g)=>a+(g.e-g.s)/6e4,0),usedMin=blocks.reduce((a,b)=>a+(b.e-b.s)/6e4,0);
+  const deadlines=Object.values(S.items).filter(it=>isTask(it)&&!isDone(it)&&!it.hidden&&new Date(it.due)>=ds&&new Date(it.due)<=atTime(day,'23:59'));
+  return {day,isToday,ds,de,as,ae,classes,gaps,open,blocks,free:Math.max(0,Math.round(openMin-usedMin)),deadlines,cursor,left:cand.length-blocks.length};
+}
+function minTxt(m){m=Math.round(m);return m<60?`${m}分`:`${Math.floor(m/60)}時間${m%60?(m%60)+'分':''}`}
+
+function renderNow(now){
+  const el=document.getElementById('view-now');let h=sampleBanner();
+  if(dayOffset===0&&now>=atTime(now,ACT_END)&&!dayOffsetTouched)dayOffset=1;
+  const day=new Date(now);day.setDate(day.getDate()+dayOffset);day.setHours(12,0,0,0);
+  const P=planDay(day,now);
+  const cur=P.isToday?P.classes.find(k=>k.start<=now&&now<k.end):null;
+  // headline
+  h+=`<div class="dayhead"><div><div class="eyebrow">${P.isToday?'今日':'明日'} ${day.getMonth()+1}/${day.getDate()}(${DAYS[day.getDay()]})</div>
+    <div class="freeline">自由時間 <b>${minTxt(P.free)}</b><span class="muted"> 残り</span></div></div>
+    <div class="seg" role="tablist" aria-label="日の切り替え"><button data-act="day" data-d="0" aria-selected="${dayOffset===0}">今日</button><button data-act="day" data-d="1" aria-selected="${dayOffset===1}">明日</button></div></div>`;
+  // focus
+  let fb=P.blocks.find(b=>b.it.id===selId)||(cur?null:P.blocks.find(b=>b.e>now))||null;
+  if(cur&&!selId)h+=`<div class="inclass"><span class="lbl">授業中</span><b>${esc(cur.c.subject)}</b><span class="muted">${esc(cur.c.campus)} ${esc(cur.c.room)}</span><span class="mono" style="margin-left:auto">終了まで ${durTxt(cur.end-now)}</span></div>`;
+  if(!fb&&cur)fb=P.blocks[0];
+  if(fb)h+=focusCard(fb,now,P.isToday);
+  else if(P.isToday&&now>=P.ae)h+=`<div class="card empty"><h2>今日はここまで。</h2><p class="muted">寝るのも立派なミッション。明日の帯はもう組んであります。</p><button class="btn" data-act="day" data-d="1">明日を見る</button></div>`;
+  else if(S.energy==='low'&&P.left>=0&&!P.blocks.length)h+=`<div class="card empty"><h2>今日は休んでOK。</h2><p class="muted">軽い課題はありません。回復を優先して、元気が戻ったら切り替えてください。</p><button class="btn" data-act="energy" data-e="normal">ふつうモードで組み直す</button></div>`;
+  else if(!P.blocks.length)h+=`<div class="card empty"><h2>空いた時間は、全部自由。</h2><p class="muted">入れる課題がありません。${S.lastImport?'':'KLMSから取り込むと、ここに自動で置かれます。'}</p></div>`;
+  // strip
+  const vs=P.ds,ve=P.de,y=t=>(t-vs)/6e4*PX,H0=y(ve);
+  let hours='',track=`<div class="night" style="top:0;height:${y(P.as)}px"></div><div class="night" style="top:${y(P.ae)}px;height:${H0-y(P.ae)}px"><span>おやすみの時間</span></div>`;
+  for(let t=new Date(Math.ceil(vs/(60*6e4))*60*6e4);t<=ve;t=new Date(t.getTime()+60*6e4))hours+=`<span style="top:${y(t)}px">${pad(t.getHours())}</span>`;
+  P.gaps.forEach(g0=>{const g={s:new Date(Math.max(g0.s,P.as)),e:new Date(Math.min(g0.e,P.ae))};const s=new Date(Math.max(g.s,vs));if(g.e<=s)return;const used=P.blocks.filter(b=>b.s>=s&&b.s<g.e).reduce((a,b)=>a+(b.e-b.s)/6e4,0);const fm=(g.e-Math.max(s,P.isToday?now:s))/6e4-used;
+    track+=`<div class="gap" style="top:${y(s)}px;height:${y(g.e)-y(s)}px">${fm>=30&&y(g.e)-y(s)>40?`<span>空き ${minTxt(fm)}</span>`:''}</div>`});
+  P.classes.forEach(k=>{if(k.end<=vs)return;const s=new Date(Math.max(k.start,vs));const isNow=P.isToday&&k.start<=now&&now<k.end;
+    track+=`<button class="blk cls ${isNow?'live':''}" data-act="goto" data-tab="week" style="top:${y(s)}px;height:${y(k.end)-y(s)-2}px"><b>${esc(k.c.subject)}</b><span>${k.p}限 ${hm(k.start)}–${hm(k.end)} · ${esc(k.c.room||k.c.campus)}</span></button>`});
+  P.blocks.forEach(b=>{const w=weightOf(b.it),hgt=Math.max(38,y(b.e)-y(b.s)-2),sel=fb&&fb.it.id===b.it.id;
+    track+=`<button class="blk task w-${w} ${sel?'sel':''}" data-act="sel" data-id="${esc(b.it.id)}" style="top:${y(b.s)}px;height:${hgt}px"><b>${esc(b.it.title)}${b.partial?'<i> 途中まで</i>':''}</b><span>${hm(b.s)}–${hm(b.e)} · ${esc(subj(b.it))}</span></button>`});
+  P.deadlines.forEach(it=>{const t=new Date(it.due);if(t<vs||t>ve)return;track+=`<div class="dl" style="top:${y(t)}px"><span>締切 ${hm(t)} ${esc(it.title)}</span></div>`});
+  if(P.isToday&&now>=vs&&now<=ve)track+=`<div class="nowline" style="top:${y(now)}px"><span>${hm(now)}</span></div>`;
+  h+=`<div class="stripwrap"><div class="strip"><div class="hours" style="height:${H0}px">${hours}</div><div class="track" style="height:${H0}px">${track}</div></div></div>`;
+  if(P.left>0)h+=`<div class="muted" style="font-size:13px">ほかに ${P.left}件の課題は、${P.isToday?'明日以降':'その先'}の帯に回しています。詰め込みすぎないため、1日のブロックは最大${MAX_BLOCKS}つです。</div>`;
+  // recovery
+  const od=overdue(now);
+  if(od.length)h+=`<div class="recover"><div class="sec-h"><div class="eyebrow">過ぎた締切</div><span class="muted" style="font-size:12px">責めない。決めるだけ。</span></div>${od.slice(0,3).map(it=>`<div class="rr"><div class="v"><div>${esc(it.title)}</div><div class="muted" style="font-size:12px">${esc(subj(it))} · ${fmtDue(it.due)}</div></div><button class="btn" data-act="pin" data-id="${esc(it.id)}">帯に入れる</button><button class="btn ghost" data-act="hide" data-id="${esc(it.id)}">手放す</button></div>`).join('')}</div>`;
+  const ua=unreadAnn().length;
+  if(ua)h+=`<button class="nrow" data-act="goto" data-tab="tasks" style="text-align:left"><span class="k">お知らせ</span><div class="v">未読が <b>${ua}件</b>。休講・教室変更がないか確認</div><span aria-hidden="true">›</span></button>`;
+  const ws=weekStart(now),dn=S.log.filter(l=>l.k==='done'&&new Date(l.t)>=ws).length,st=S.log.filter(l=>l.k==='start'&&new Date(l.t)>=ws).length;
+  const dots=[];for(let i=0;i<Math.min(dn,12);i++)dots.push('<i class="d"></i>');for(let i=0;i<Math.min(st,8);i++)dots.push('<i class="s"></i>');if(!dots.length)dots.push('<i></i>');
+  h+=`<div class="card week" style="padding:14px 18px;box-shadow:none"><span class="eyebrow">今週</span><span>完了 <b class="mono">${dn}</b></span><span>着手 <b class="mono">${st}</b></span><span class="dots">${dots.join('')}</span></div>`;
+  el.innerHTML=h;
+  const sw=el.querySelector('.stripwrap');
+  if(sw){sw.scrollTop=stripScroll==null?Math.max(0,(Math.max(P.isToday?now:P.as,P.as)-P.ds)/6e4*PX-70):stripScroll;sw.addEventListener('scroll',()=>{stripScroll=sw.scrollTop},{passive:true})}
+}
+function focusCard(b,now,isToday){
+  const it=b.it,ms=new Date(it.due)-now,u=it.pinned&&ms<0?'hot':urg(ms),w=weightOf(it),len=Math.round((b.e-b.s)/6e4);
+  const when=!isToday?'明日':b.s<=now?'今から':`あと${durTxt(b.s-now)}で`;
+  let h=`<div class="card main ${u}"><div class="slotline"><span class="mono">${hm(b.s)}–${hm(b.e)}</span><span>${when} · ${len}分</span>${b.partial?'<span class="chip">途中まででOK</span>':''}</div>
+    <div class="course"><span class="chip">${esc(subj(it))}</span><span class="chip w-${w}">${W_LABEL[w]}</span></div><h2>${esc(it.title)}</h2>`;
+  if(timer&&timer.id===it.id){
+    const left=Math.max(0,timer.end-Date.now());
+    h+=`<div class="timer"><div class="t">${Math.floor(left/6e4)}:${pad(Math.floor(left/1e3)%60)}</div><div class="muted">始めただけで、もう達成。</div></div>
+      <div class="actions"><button class="btn" data-act="stop">ここでやめる</button><button class="btn" data-act="done" data-id="${esc(it.id)}">完了した</button><a class="btn" href="${esc(it.url)}" target="_blank" rel="noopener">KLMS↗</a></div>`;
+  }else{
+    h+=`<div class="count">${ms>=0?`<span class="dur">締切まで ${durHTML(ms)}</span>`:`<span class="dur">締切を ${durTxt(-ms)} 過ぎています</span>`}<span class="due mono">${fmtDue(it.due)}</span></div>
+    <div class="actions"><button class="btn primary" data-act="start" data-id="${esc(it.id)}">2分だけ始める</button>
+    <button class="btn" data-act="done" data-id="${esc(it.id)}">完了</button>
+    <button class="btn" data-act="snooze" data-id="${esc(it.id)}">${ms<18*H&&ms>0?'3時間後に':'明日に回す'}</button>
+    <a class="btn" href="${esc(it.url)}" target="_blank" rel="noopener">KLMS↗</a></div>`;
+  }
+  return h+'</div>';
+}
+
+function taskRow(it,now){
+  const ms=new Date(it.due)-now,w=weightOf(it),done=isDone(it);
+  return `<div class="row ${done?'done':ms<0?'hot':urg(ms)}">
+    <button class="check ${done?'on':''}" data-act="toggle" data-id="${esc(it.id)}" aria-label="${done?'未完了に戻す':'完了にする'}" ${it.submitted?'disabled title="KLMSで提出済み"':''}>${done?'✓':''}</button>
+    <div class="rmain"><div class="rtitle">${esc(it.title)}</div><div class="rmeta"><span class="chip">${esc(subj(it))}</span><span class="mono">${fmtDue(it.due)}</span>${done?(it.submitted?'<span>提出済み</span>':'<span>完了</span>'):ms>=0?`<span>あと${durTxt(ms)}</span>`:'<span>期限切れ</span>'}${it.snoozeUntil&&new Date(it.snoozeUntil)>now?'<span>· 後回し中</span>':''}</div></div>
+    <button class="wt w-${w}" data-act="weight" data-id="${esc(it.id)}" title="重さを切り替え">${W_LABEL[w]}</button>
+    <a class="open" href="${esc(it.url)}" target="_blank" rel="noopener" aria-label="KLMSで開く">↗</a></div>`;
+}
+function renderTasks(now){
+  const el=document.getElementById('view-tasks');let h=sampleBanner();
+  const tasks=Object.values(S.items).filter(it=>isTask(it)&&!it.hidden).sort((a,b)=>new Date(a.due)-new Date(b.due));
+  const g={od:[],d1:[],d3:[],d7:[],later:[],done:[]};
+  tasks.forEach(it=>{const ms=new Date(it.due)-now;if(isDone(it))g.done.push(it);else if(ms<0)g.od.push(it);else if(ms<D)g.d1.push(it);else if(ms<3*D)g.d3.push(it);else if(ms<7*D)g.d7.push(it);else g.later.push(it)});
+  const sec=(t,a)=>a.length?`<div class="group"><h3>${t}(${a.length})</h3><div class="list">${a.map(x=>taskRow(x,now)).join('')}</div></div>`:'';
+  h+=sec('24時間以内',g.d1)+sec('3日以内',g.d3)+sec('今週',g.d7)+sec('それ以降',g.later)+sec('過ぎた締切',g.od);
+  if(!tasks.length)h+=`<div class="card empty"><h2>課題はまだありません</h2><p class="muted">取り込みタブからKLMSのデータを入れてください。</p></div>`;
+  const anns=Object.values(S.items).filter(it=>it.type==='announcement'&&!it.hidden).sort((a,b)=>new Date(b.due)-new Date(a.due)).slice(0,15);
+  if(anns.length)h+=`<div class="group"><h3>お知らせ</h3><div class="list">${anns.map(a=>`<div class="row"><div class="rmain"><div class="rtitle ${a.readState==='unread'?'unread':''}">${esc(a.title)}</div><div class="rmeta"><span class="chip">${esc(subj(a))}</span><span class="mono">${fmtDue(a.due)}</span></div></div><a class="open" href="${esc(a.url)}" target="_blank" rel="noopener" data-act="read" data-id="${esc(a.id)}" aria-label="KLMSで開く">↗</a></div>`).join('')}</div></div>`;
+  if(g.done.length)h+=`<details class="group"><summary class="muted" style="cursor:pointer;font-size:13px">完了・提出済み(${g.done.length})</summary><div class="list" style="margin-top:6px">${g.done.slice(-20).reverse().map(x=>taskRow(x,now)).join('')}</div></details>`;
+  el.innerHTML=h;
+}
+
+function renderWeek(now){
+  const el=document.getElementById('view-week');let h=sampleBanner();
+  const cs=Object.values(S.courses).filter(termOK),grid={};let maxP=5,sat=false;
+  cs.forEach(c=>c.slots.forEach(s=>{const k=s.d+'-'+s.p;(grid[k]=grid[k]||[]).push(c);if(s.p>maxP)maxP=Math.min(7,s.p);if(s.d===6)sat=true}));
+  const days=sat?[1,2,3,4,5,6]:[1,2,3,4,5],td=now.getDay();
+  h+=`<div class="tt-wrap"><table class="tt"><thead><tr><th style="width:52px"></th>${days.map(d=>`<th class="${d===td?'today':''}">${DAYS[d]}</th>`).join('')}</tr></thead><tbody>`;
+  for(let p=1;p<=maxP;p++){
+    h+=`<tr><td class="pn"><b>${p}</b>${PERIODS[p][0]}</td>`;
+    days.forEach(d=>{
+      const list=grid[d+'-'+p]||[];const isNow=d===td&&now>=atTime(now,PERIODS[p][0])&&now<atTime(now,PERIODS[p][1]);
+      h+=`<td class="${d===td?'todaycol':''}">${list.map(c=>`<button class="cell ${isNow?'now':''} ${selCell===c.id?'sel':''}" data-act="cell" data-id="${c.id}"><b>${esc(c.subject)}</b><span>${esc(c.room||c.campus)}</span></button>`).join('')}</td>`;
+    });
+    h+='</tr>';
+  }
+  h+='</tbody></table></div>';
+  if(!cs.some(c=>c.slots.length))h+=`<div class="card empty"><h2>時間割がまだ空です</h2><p class="muted">取り込みタブで「コース一覧」を貼ると、コース名の[月2 木2]から自動で組みます。</p></div>`;
+  const sel=S.courses[selCell];
+  if(sel){
+    h+=`<div class="card detail"><div class="eyebrow">コースの詳細</div>
+      <label class="field">表示名(科目名が変なら直せます)<input id="edit-subject" value="${esc(sel.subject)}"></label>
+      <dl class="kv"><dt>教員</dt><dd>${esc(sel.teacher||'—')}</dd><dt>曜日・時限</dt><dd>${sel.slots.map(s=>DAYS[s.d]+s.p).join(' ')||'—'}</dd><dt>場所</dt><dd>${esc(sel.campus)} ${esc(sel.room)}</dd><dt>学期</dt><dd>${esc(sel.term||'—')}</dd><dt>KLMSの名前</dt><dd class="muted">${esc(sel.name)}</dd></dl>
+      <div class="btnrow"><button class="btn" data-act="save-subject" data-id="${sel.id}">保存</button><a class="btn" href="https://lms.keio.jp/courses/${esc(sel.id)}" target="_blank" rel="noopener">KLMSで開く↗</a></div></div>`;
+  }
+  const other=Object.values(S.courses).filter(c=>!c.slots.length);
+  if(other.length)h+=`<div class="muted" style="font-size:12px">時間割に入らないコース: ${other.map(c=>esc(c.name)).join(' / ')}</div>`;
+  el.innerHTML=h;
+}
+
+function renderImport(){
+  const ss=S.semesterStart||'2026-09-20';
+  const pu=`https://lms.keio.jp/api/v1/planner/items?start_date=${ss}&per_page=100`;
+  const cu=`https://lms.keio.jp/api/v1/courses?enrollment_state=active&per_page=100`;
+  document.getElementById('url-planner').textContent=pu;document.getElementById('open-planner').href=pu;
+  document.getElementById('url-courses').textContent=cu;document.getElementById('open-courses').href=cu;
+  const si=document.getElementById('semstart');if(document.activeElement!==si)si.value=ss;
+  document.getElementById('term').value=S.term??'';
+  const nT=Object.values(S.items).filter(isTask).length,nC=Object.keys(S.courses).length;
+  document.getElementById('import-info').textContent=S.lastImport?`最終取り込み: ${fmtAgo(S.lastImport)}(課題 ${nT}件・コース ${nC}件)`:'まだKLMSから取り込んでいません。';
+  document.getElementById('btn-clear-sample').hidden=!S.sample;
+  document.getElementById('btn-wipe').textContent=wipeArm?'もう一度押すと削除':'全データを削除';
+}
+function fmtAgo(iso){const ms=Date.now()-new Date(iso);if(ms<H)return `${Math.max(1,Math.floor(ms/6e4))}分前`;if(ms<D)return `${Math.floor(ms/H)}時間前`;return `${Math.floor(ms/D)}日前`}
+
+/* ---------- import ---------- */
+/* ブラウザのJSONビューアの「整形表示」ラベルなど、前後の余計な文字や、2つ続けて貼ったJSONも読めるようにする */
+function parseLoose(t){
+  const tryP=s=>{try{return JSON.parse(s)}catch(e){return undefined}};
+  let r=tryP(t);if(r!==undefined)return r;
+  const s=t.search(/[\[{]/),e=Math.max(t.lastIndexOf(']'),t.lastIndexOf('}'));
+  if(s<0||e<=s)return undefined;
+  const body=t.slice(s,e+1).replace(/while\(1\);/g,'');
+  r=tryP(body);if(r!==undefined)return r;
+  const parts=body.split(/\]\s*(?:while\(1\);)?\s*\[/);
+  if(parts.length>1){r=tryP('['+parts.map(p=>p.replace(/^\s*\[|\]\s*$/g,'')).filter(p=>p.trim()).join(',')+']');if(r!==undefined)return r}
+  return undefined;
+}
+function setStatus(ok,msg){const el=document.getElementById('import-status');el.innerHTML=`<div class="status ${ok?'ok':'err'}">${msg}</div>`}
+function doImport(){
+  const ta=document.getElementById('paste');let t=ta.value.trim().replace(/^while\(1\);/,'').trim();
+  if(!t)return setStatus(false,'貼り付け欄が空です。');
+  const data=parseLoose(t);
+  if(data===undefined){
+    const s=t.search(/[\[{]/),cut=s>=0&&!/[\]}]\s*$/.test(t);
+    return setStatus(false,cut?'データが途中で切れているようです。KLMSのページで <b>Ctrl+A</b> で全選択してからコピーし直してください。':`読み取れない形式でした。貼った文字の先頭は「<span class="mono">${esc(t.slice(0,40))}</span>」です。KLMSのアドレスを開いた画面の文字を、そのまま全部コピーして貼ってください。`);
+  }
+  if(data&&data.app==='mission-now'&&data.state){S=data.state;save();ta.value='';setStatus(true,'バックアップから復元しました。');return render()}
+  if(!Array.isArray(data)){
+    return setStatus(false,data&&data.errors?'KLMSにログインしていない状態で開いたようです。ログインしてからもう一度アドレスを開いてください。':'想定と違う形式でした。課題かコース一覧のアドレスのデータを貼ってください。');
+  }
+  if(S.sample){S.courses={};S.items={};S.sample=false}
+  const start=new Date((S.semesterStart||'2000-01-01')+'T00:00:00');
+  let nNew=0,nUpd=0,nSkip=0,nC=0;
+  data.forEach(x=>{
+    if(x&&x.plannable_type){
+      const p=x.plannable||{},date=p.due_at||p.todo_date||x.plannable_date;
+      if(!date||new Date(date)<start){nSkip++;return}
+      if(x.course_id&&x.context_name&&!S.courses[x.course_id])S.courses[x.course_id]={id:x.course_id,...parseCourse(x.context_name)};
+      const id=x.plannable_type+':'+x.plannable_id,prev=S.items[id],sub=x.submissions||{};
+      S.items[id]={...(prev||{}),id,type:x.plannable_type,title:p.title||p.name||'(無題)',courseId:x.course_id,courseName:x.context_name,due:date,
+        url:'https://lms.keio.jp'+(x.html_url||''),points:p.points_possible??null,submitted:!!(sub.submitted||sub.excused||(x.planner_override&&x.planner_override.marked_complete)),missing:!!sub.missing,
+        readState:p.read_state||(prev&&prev.readState)||null};
+      prev?nUpd++:nNew++;
+    }else if(x&&x.id&&x.name){
+      const prev=S.courses[x.id],pc=parseCourse(x.name);
+      S.courses[x.id]={id:x.id,...pc,subject:prev&&prev.subjectEdited?prev.subject:pc.subject,subjectEdited:!!(prev&&prev.subjectEdited)};nC++;
+    }
+  });
+  S.lastImport=new Date().toISOString();save();ta.value='';
+  let msg=[];if(nNew||nUpd)msg.push(`課題・お知らせ: 新規 ${nNew}件、更新 ${nUpd}件`);if(nC)msg.push(`コース ${nC}件(時間割に反映しました)`);if(nSkip)msg.push(`学期開始日より前の ${nSkip}件はスキップ`);
+  if(data.length>=100)msg.push('<br>100件ちょうど届いたので、続きがあるかもしれません。学期開始日を少し先にずらして、もう一度取り込んでください。');
+  setStatus(true,msg.join('。')||'取り込める項目がありませんでした。');render();
+}
+
+/* ---------- actions ---------- */
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2600)}
+function log(k){S.log.push({k,t:new Date().toISOString()});if(S.log.length>500)S.log=S.log.slice(-500)}
+function copyText(s){
+  if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(s).then(()=>toast('コピーしました'),()=>fallbackCopy(s));
+  fallbackCopy(s);
+}
+function fallbackCopy(s){const ta=document.createElement('textarea');ta.value=s;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('コピーしました')}catch(e){toast('コピーできませんでした。手動で選択してください')}ta.remove()}
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act],[data-tab],.energy button');if(!b)return;
+  const a=b.dataset.act,id=b.dataset.id,it=id&&S.items[id];
+  if(!a&&b.dataset.tab){tab=b.dataset.tab;window.scrollTo(0,0);return render()}
+  if(!a&&b.dataset.e){S.energy=b.dataset.e;save();return render()}
+  switch(a){
+    case 'goto':tab=b.dataset.tab;window.scrollTo(0,0);break;
+    case 'energy':S.energy=b.dataset.e;break;
+    case 'start':timer={id,end:Date.now()+120e3};log('start');tick();break;
+    case 'stop':timer=null;toast('始められた。それで十分。');break;
+    case 'done':selId=null;if(it){it.userDone=true;it.pinned=false;log('done');toast(DONE_MSG[Math.floor(Math.random()*DONE_MSG.length)])}timer=null;break;
+    case 'toggle':if(it&&!it.submitted){it.userDone=!it.userDone;if(it.userDone){it.pinned=false;log('done');toast(DONE_MSG[Math.floor(Math.random()*DONE_MSG.length)])}}break;
+    case 'snooze':selId=null;if(it){const ms=new Date(it.due)-Date.now();if(ms<18*H&&ms>0){it.snoozeUntil=new Date(Date.now()+3*H).toISOString();toast('3時間後にまた出します')}else{const t=new Date();t.setDate(t.getDate()+1);t.setHours(6,0,0,0);it.snoozeUntil=t.toISOString();toast('明日の朝に戻します')}it.pinned=false}break;
+    case 'pin':if(it){it.pinned=true;it.snoozeUntil=null;toast('今日の帯に入れました')}break;
+    case 'hide':if(it){it.hidden=true;toast('手放しました。次へ。')}break;
+    case 'weight':if(it){const o=['light','mid','heavy'];it.weight=o[(o.indexOf(weightOf(it))+1)%3]}break;
+    case 'read':if(it)it.readState='read';save();setTimeout(render,50);return;
+    case 'sel':selId=selId===id?null:id;break;
+    case 'day':dayOffset=+b.dataset.d;dayOffsetTouched=true;selId=null;stripScroll=null;break;
+    case 'cell':selCell=selCell===+id?null:+id;break;
+    case 'save-subject':{const c=S.courses[id],v=document.getElementById('edit-subject').value.trim();if(c&&v){c.subject=v;c.subjectEdited=true;toast('保存しました')}break}
+    case 'copy':copyText(document.getElementById(b.dataset.target).textContent);return;
+    case 'import':doImport();return;
+    case 'backup':copyText(JSON.stringify({app:'mission-now',savedAt:new Date().toISOString(),state:S}));return;
+    case 'clear-sample':S.courses={};S.items={};S.sample=false;toast('サンプルを消しました');break;
+    case 'wipe':if(!wipeArm){wipeArm=true;setTimeout(()=>{wipeArm=false;render()},4000);return render()}wipeArm=false;S={...makeSample(),courses:{},items:{},sample:false};toast('全データを削除しました');break;
+    default:return;
+  }
+  save();render();
+});
+document.getElementById('semstart').addEventListener('change',e=>{S.semesterStart=e.target.value||'2026-09-20';save();render()});
+document.getElementById('term').addEventListener('change',e=>{S.term=e.target.value||null;save();render()});
+
+function tick(){
+  if(!timer)return;
+  if(Date.now()>=timer.end){timer=null;toast('2分クリア。続けてもいいし、ここで止めてもいい。');render();return}
+  if(tab==='now')render();setTimeout(tick,1000);
+}
+setInterval(()=>{if(!timer&&document.activeElement?.tagName!=='INPUT'&&document.activeElement?.tagName!=='TEXTAREA')render()},30000);
+render();
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>

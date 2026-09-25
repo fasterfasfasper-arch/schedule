@@ -1,0 +1,17 @@
+{
+  "name": "Mission Now",
+  "short_name": "Mission Now",
+  "description": "KLMSの課題を取り込み、1日の帯に自動で置くスケジュールアプリ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EEF1F5",
+  "theme_color": "#EEF1F5",
+  "lang": "ja",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
